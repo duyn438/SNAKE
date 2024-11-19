@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Rắn Săn Mồi</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+
+        #game-container {
+            position: relative;
+            text-align: center;
+        }
+
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(20, 20px); /* 20 cột, mỗi cột 20px */
+            grid-template-rows: repeat(20, 20px); /* 20 hàng, mỗi hàng 20px */
+            gap: 1px;
+            margin-bottom: 10px;
+            background-color: #000;
+        }
+
+        #score {
+            font-size: 18px;
+            color: #333;
+            margin-top: 10px;
+        }
+
+        #start-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        #start-button:hover {
+            background-color: #45a049;
+        }
+
+        .snake {
+            background-image: url('https://img.pikbest.com/png-images/20240514/cute-green-cartoon-snake-_10563087.png!w700wp');  /* Đường dẫn đến hình ảnh thân rắn */
+            background-size: cover; /* Đảm bảo hình ảnh phủ kín ô */
+            width: 100%;
+            height: 100%;
+        }
+
+        .snake-head {
+            background-image: url('https://img.pikbest.com/png-images/20240514/cute-green-cartoon-snake-_10563087.png!w700wp');  /* Đường dẫn đến hình ảnh đầu rắn */
+            background-size: cover;  
+            width: 100%;
+            height: 100%;
+        }
+
+        .food {
+            background-image: url('https://png.pngtree.com/png-vector/20220930/ourmid/pngtree-red-apple-fruits-sweet-png-image_6231857.png'); /* Đường dẫn đến hình ảnh thức ăn */
+            background-size: cover;  
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="game-board">
+            <!-- Các khối sẽ được thêm vào ở đây bằng JavaScript -->
+        </div>
+        <div id="score">Điểm: 0</div>
+        <button id="start-button">Bắt Đầu</button>
+    </div>
+    <script>
+        const gameBoard = document.getElementById('game-board');
+        const scoreDisplay = document.getElementById('score');
+        const startButton = document.getElementById('start-button');
+        const gridSize = 20;
+        let snake = [{ x: 9, y: 9 }];
+        let food = { x: 5, y: 5 };
+        let direction = 'RIGHT';
+        var score = 0;
+        let gameInterval;
+        let isGameRunning = false;
+
+        const directions = {
+            UP: { x: 0, y: -1 },
+            DOWN: { x: 0, y: 1 },
+            LEFT: { x: -1, y: 0 },
+            RIGHT: { x: 1, y: 0 }
+        };
+
+        function createGrid() {
+            gameBoard.innerHTML = '';
+            for (let i = 0; i < gridSize * gridSize; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                gameBoard.appendChild(cell);
+            }
+        }
+
+        function drawGame() {
+            clearGrid();
+            drawSnake();
+            drawFood();
+            moveSnake();
+            checkCollision();
+            updateScore();
+        }
+
+        function clearGrid() {
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach(cell => {
+                cell.classList.remove('snake', 'food', 'snake-head');
+            });
+        }
+
+        function getCell(x, y) {
+            return gameBoard.children[y * gridSize + x];
+        }
+
+        function drawSnake() {
+            // Vẽ đầu rắn
+            const head = snake[0];
+            getCell(head.x, head.y).classList.add('snake-head');  // Thêm lớp 'snake-head' cho đầu rắn
+
+            // Vẽ thân rắn
+            for (let i = 1; i < snake.length; i++) {
+                getCell(snake[i].x, snake[i].y).classList.add('snake');
+            }
+        }
+
+        function drawFood() {
+            getCell(food.x, food.y).classList.add('food');
+        }
+
+        function moveSnake() {
+            const head = { ...snake[0] };
+            head.x += directions[direction].x;
+            head.y += directions[direction].y;
+
+            snake.unshift(head);
+
+            // Kiểm tra xem đầu rắn có ăn thức ăn không
+            if (head.x === food.x && head.y === food.y) {
+                score += 10;
+                generateFood();  // Sinh thức ăn mới
+
+                // Kiểm tra nếu điểm đạt mục tiêu
+                if (score >= targetScore) {
+                    winGame();  // Gọi hàm xử lý chiến thắng
+                }
+            } else {
+                snake.pop();  // Nếu không ăn, loại bỏ phần cuối của rắn
+            }
+        }
+
+        function checkCollision() {
+            const head = snake[0];
+
+            // Kiểm tra va chạm với tường
+            if (head.x < 0 || head.x >= gridSize || head.y < 0 || head.y >= gridSize) {
+                endGame();
+            }
+
+            // Kiểm tra va chạm với chính thân rắn
+            for (let i = 1; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) {
+                    endGame();
+                }
+            }
+        }
+
+        function endGame() {
+            clearInterval(gameInterval); // Dừng trò chơi
+            setTimeout( ()=>{ 
+                alert("Game Over! Điểm của bạn: " + score);
+                resetGame();
+            },150); 
+        }
+
+        function winGame() {
+            clearInterval(gameInterval); 
+            setTimeout( ()=>{ 
+                alert("Chúc mừng! Bạn đã chiến thắng với điểm số: " + score); 
+                resetGame();  // Reset lại trò chơi để bắt đầu mới
+            },150);
+        }
+
+        function resetGame() {
+            snake = [{ x: 9, y: 9 }];
+            direction = 'RIGHT';
+            score = 0;
+            generateFood();
+            isGameRunning = false;
+            updateScore();
+            startButton.disabled = false;
+        }
+
+        function generateFood() {
+            let newFood;
+            do {
+                newFood = {
+                    x: Math.floor(Math.random() * gridSize),
+                    y: Math.floor(Math.random() * gridSize)
+                };
+            } while (snake.some(segment => segment.x === newFood.x && segment.y === newFood.y));
+
+            food = newFood;
+        }
+
+        function updateScore() {
+            scoreDisplay.textContent = `Điểm: ${score}`;
+        }
+
+        function changeDirection(event) {
+            const keyPressed = event.keyCode;
+            if (keyPressed === 37 && direction !== 'RIGHT') {
+                direction = 'LEFT';
+            } else if (keyPressed === 38 && direction !== 'DOWN') {
+                direction = 'UP';
+            } else if (keyPressed === 39 && direction !== 'LEFT') {
+                direction = 'RIGHT';
+            } else if (keyPressed === 40 && direction !== 'UP') {
+                direction = 'DOWN';
+            }
+        }
+
+        function startGame() {
+            if (!isGameRunning) {
+                isGameRunning = true;
+                startButton.disabled = true;
+                createGrid();
+                gameInterval = setInterval(drawGame, 150);  // Mỗi 150ms vẽ lại game
+            }
+        }
+
+        startButton.addEventListener('click', startGame);
+        document.addEventListener('keydown', changeDirection);
+    </script>
+</body>
+</html>
